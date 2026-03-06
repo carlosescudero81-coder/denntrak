@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DentTrack">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="DentTrack">
+<meta name="theme-color" content="#080c10">
+<meta name="description" content="Control de producción dental para dentistas autónomos">
+
+<!-- PWA Manifest inline -->
+<script>
+const manifestData = {
+  name: "DentTrack - Control Dental",
+  short_name: "DentTrack",
+  description: "Control de producción para dentistas autónomos",
+  start_url: ".",
+  display: "standalone",
+  background_color: "#080c10",
+  theme_color: "#00e5b0",
+  orientation: "portrait",
+  icons: [
+    { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%23080c10' rx='32'/%3E%3Ctext x='96' y='130' font-size='110' text-anchor='middle'%3E%F0%9F%A6%B7%3C/text%3E%3C/svg%3E", sizes: "192x192", type: "image/svg+xml" },
+    { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%23080c10' rx='80'/%3E%3Ctext x='256' y='360' font-size='300' text-anchor='middle'%3E%F0%9F%A6%B7%3C/text%3E%3C/svg%3E", sizes: "512x512", type: "image/svg+xml" }
+  ]
+};
+const blob = new Blob([JSON.stringify(manifestData)], {type:'application/json'});
+const manifestURL = URL.createObjectURL(blob);
+document.write('<link rel="manifest" href="' + manifestURL + '">');
+</script>
+
+<title>🦷 DentTrack</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+:root {
+  --bg:#080c10; --bg2:#0d1219; --card:#131b24; --card2:#1b2535;
+  --border:rgba(255,255,255,0.06); --border2:rgba(255,255,255,0.11);
+  --accent:#00e5b0; --adim:rgba(0,229,176,0.11); --aglow:rgba(0,229,176,0.25);
+  --blue:#4da6ff; --bdim:rgba(77,166,255,0.11);
+  --amber:#ffb347; --adim2:rgba(255,179,71,0.11);
+  --red:#ff4f6b; --rdim:rgba(255,79,107,0.11);
+  --green:#2dd4a0;
+  --tx:#ecf2f8; --tx2:#6b8099; --tx3:#334455;
+  --r:14px; --rs:9px;
+  --sit:env(safe-area-inset-top,0px);
+  --sib:env(safe-area-inset-bottom,0px);
+  --sil:env(safe-area-inset-left,0px);
+  --sir:env(safe-area-inset-right,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;}
+html{height:100%;height:-webkit-fill-available;}
+body{
+  font-family:'Nunito',sans-serif;
+  background:var(--bg);color:var(--tx);
+  height:100%;height:-webkit-fill-available;
+  overflow:hidden;
+  overscroll-behavior:none;
+  -webkit-overflow-scrolling:touch;
+}
+.app{
+  display:flex;flex-direction:column;
+  height:100%;height:-webkit-fill-available;
+  padding-top:var(--sit);
+  padding-left:var(--sil);
+  padding-right:var(--sir);
+}
+
+/* TOP BAR */
+.topbar{
+  flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px 10px;
+  background:var(--bg);
+  border-bottom:1px solid var(--border);
+  position:relative;z-index:10;
+}
+.logo{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;color:var(--accent);letter-spacing:-.3px;}
+.topright{display:flex;align-items:center;gap:8px;}
+.tot{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--accent);font-weight:500;}
+.ibadge{background:var(--rdim);color:var(--red);border:1px solid rgba(255,79,107,.3);border-radius:20px;padding:2px 9px;font-size:11px;font-weight:800;display:none;}
+.ibadge.on{display:inline-block;}
+
+/* PAGES */
+.pages{flex:1;overflow:hidden;position:relative;}
+.page{
+  position:absolute;inset:0;
+  overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-y:contain;
+  padding:14px 14px calc(72px + var(--sib));
+  opacity:0;pointer-events:none;
+  transform:translateY(5px);
+  transition:opacity .2s,transform .2s;
+  will-change:transform;
+}
+.page.active{opacity:1;pointer-events:all;transform:none;}
+
+/* BOTTOM NAV */
+.bnav{
+  flex-shrink:0;
+  display:flex;
+  background:var(--bg2);
+  border-top:1px solid var(--border);
+  padding-bottom:var(--sib);
+}
+.bni{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  padding:9px 2px 5px;gap:2px;
+  background:none;border:none;cursor:pointer;
+  color:var(--tx3);
+  font-family:'Nunito',sans-serif;font-size:10px;font-weight:700;
+  transition:color .2s;position:relative;
+  min-width:0;
+  -webkit-user-select:none;user-select:none;
+}
+.bni .ico{font-size:20px;line-height:1.2;}
+.bni.active{color:var(--accent);}
+.bdot{position:absolute;top:7px;right:calc(50% - 14px);width:7px;height:7px;border-radius:50%;background:var(--red);display:none;}
+.bdot.on{display:block;}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:11px;}
+.ctitle{font-family:'Syne',sans-serif;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--tx2);margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+
+/* ── VOICE SECTION ─────────────────────────────────────── */
+.vhero{
+  background:radial-gradient(ellipse at 50% -10%,rgba(0,229,176,0.06) 0%,transparent 55%),var(--card);
+  border:1px solid var(--border);border-radius:var(--r);
+  padding:22px 16px 18px;margin-bottom:11px;text-align:center;overflow:hidden;
+}
+.vstatus{font-size:13px;color:var(--tx2);margin-bottom:14px;font-weight:600;min-height:20px;transition:color .3s;}
+.vstatus.rec{color:var(--red);}
+.vstatus.proc{color:var(--blue);}
+.vstatus.ok{color:var(--accent);}
+.vstatus.err{color:var(--amber);}
+
+/* BIG VOICE BUTTON */
+.vring-wrap{position:relative;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;}
+.vring,.vring2{
+  position:absolute;border-radius:50%;
+  border:2px solid var(--aglow);opacity:0;
+  pointer-events:none;
+}
+.vring{inset:-14px;} .vring2{inset:-26px;border-width:1px;}
+.vbtn{
+  width:88px;height:88px;border-radius:50%;
+  background:var(--adim);border:2.5px solid var(--accent);
+  color:var(--accent);font-size:34px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;position:relative;z-index:1;
+  transition:background .3s,border-color .3s,color .3s;
+  outline:none;-webkit-appearance:none;
+  touch-action:manipulation;
+  -webkit-user-select:none;user-select:none;
+}
+.vbtn.rec{background:var(--rdim);border-color:var(--red);color:var(--red);}
+.vbtn.rec~.vring{animation:rp 1.5s ease-out infinite;opacity:1;}
+.vbtn.rec~.vring2{animation:rp 1.5s ease-out .4s infinite;opacity:1;}
+.vbtn.proc{background:var(--bdim);border-color:var(--blue);color:var(--blue);}
+.vbtn.ok{background:rgba(0,229,176,0.18);border-color:var(--accent);}
+@keyframes rp{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.5);opacity:0}}
+
+.vhint{font-size:11px;color:var(--tx3);line-height:1.6;padding:0 10px;}
+.vhint em{color:var(--tx2);font-style:italic;}
+
+/* WAVE */
+.vwave{display:none;gap:3px;align-items:flex-end;justify-content:center;height:22px;margin:10px auto 0;}
+.vwave.on{display:flex;}
+.wb{width:4px;background:var(--red);border-radius:2px;min-height:3px;animation:wa .55s ease-in-out infinite alternate;}
+.wb:nth-child(2){animation-delay:.1s}.wb:nth-child(3){animation-delay:.2s}.wb:nth-child(4){animation-delay:.3s}
+.wb:nth-child(5){animation-delay:.15s}.wb:nth-child(6){animation-delay:.05s}.wb:nth-child(7){animation-delay:.25s}
+@keyframes wa{from{height:3px}to{height:16px}}
+
+/* TRANSCRIPT */
+.vtransc{
+  background:var(--card2);border:1px solid var(--border2);
+  border-radius:var(--rs);padding:10px 12px;
+  font-size:12px;font-family:'JetBrains Mono',monospace;
+  color:var(--tx);line-height:1.6;text-align:left;
+  display:none;margin-top:12px;
+}
+.vtransc.on{display:block;}
+
+/* PROCESSING STEPS */
+.pbar{display:none;flex-direction:column;gap:6px;margin-top:12px;padding:0 4px;}
+.pbar.on{display:flex;}
+.ps{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--tx3);transition:color .25s;}
+.ps.go{color:var(--blue);} .ps.done{color:var(--accent);}
+.pd{width:7px;height:7px;border-radius:50%;background:var(--tx3);flex-shrink:0;transition:background .25s;}
+.ps.go .pd{background:var(--blue);animation:bk .7s infinite;}
+.ps.done .pd{background:var(--accent);}
+@keyframes bk{0%,100%{opacity:1}50%{opacity:.2}}
+
+
+/* AUTO SAVED CARD */
+.assaved{
+  display:none;
+  background:linear-gradient(135deg,rgba(0,229,176,.07),rgba(77,166,255,.04));
+  border:1px solid rgba(0,229,176,.28);
+  border-radius:var(--r);padding:13px;margin-bottom:11px;
+  animation:sd .35s cubic-bezier(.34,1.56,.64,1);
+}
+.assaved.on{display:block;}
+@keyframes sd{from{opacity:0;transform:translateY(-6px) scale(.97)}to{opacity:1;transform:none}}
+.asl{font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--accent);display:flex;justify-content:space-between;margin-bottom:5px;}
+.asp{font-size:15px;font-weight:800;}
+.astags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
+
+/* FORM */
+.field{margin-bottom:10px;}
+.flbl{font-size:10px;color:var(--tx3);font-weight:800;letter-spacing:.5px;margin-bottom:4px;text-transform:uppercase;}
+.fi,.fs{
+  width:100%;background:var(--card2);border:1.5px solid var(--border);
+  border-radius:var(--rs);padding:11px 13px;
+  color:var(--tx);font-size:15px;font-family:'Nunito',sans-serif;
+  outline:none;-webkit-appearance:none;appearance:none;
+  transition:border-color .2s;
+  /* iOS fix */
+  border-radius:var(--rs);
+  -webkit-border-radius:var(--rs);
+}
+.fi:focus,.fs:focus{border-color:var(--accent);}
+.fi::placeholder{color:var(--tx3);}
+.fs option{background:#1b2535;}
+.row2{display:flex;gap:8px;} .row2 .field{flex:1;}
+
+/* CHIPS */
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;}
+.chip{
+  padding:5px 11px;border-radius:20px;
+  border:1.5px solid var(--border);background:var(--card2);
+  color:var(--tx2);font-size:12px;cursor:pointer;
+  font-family:'Nunito',sans-serif;font-weight:700;
+  transition:all .15s;
+  -webkit-user-select:none;user-select:none;
+}
+.chip.sel{background:var(--adim);border-color:var(--accent);color:var(--accent);}
+
+/* BUTTONS */
+.btn{
+  width:100%;padding:13px;border-radius:var(--rs);
+  border:none;font-size:14px;font-weight:800;
+  cursor:pointer;font-family:'Nunito',sans-serif;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  transition:opacity .15s,transform .15s;
+  -webkit-user-select:none;user-select:none;
+  touch-action:manipulation;
+}
+.btn:active{opacity:.82;transform:scale(.98);}
+.ba{background:var(--accent);color:#050d0a;}
+.bg{background:var(--card2);color:var(--tx);border:1px solid var(--border);}
+.bd{background:var(--rdim);color:var(--red);border:1px solid rgba(255,79,107,.25);}
+.bb{background:var(--bdim);color:var(--blue);border:1px solid rgba(77,166,255,.25);}
+.bsm{padding:8px 13px;font-size:12px;width:auto;border-radius:8px;}
+.bxs{padding:5px 9px;font-size:11px;width:auto;border-radius:6px;}
+
+/* RECORDS */
+.rec{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:13px;margin-bottom:9px;}
+.rectop{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px;}
+.recname{font-size:15px;font-weight:800;}
+.recdate{font-size:10px;color:var(--tx3);font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-left:6px;}
+.rectags{display:flex;flex-wrap:wrap;gap:4px;}
+.tag{padding:2px 8px;border-radius:11px;font-size:10px;font-weight:800;}
+.tc{background:var(--bdim);color:var(--blue);}
+.tt{background:var(--adim2);color:var(--amber);}
+.tp{background:var(--adim);color:var(--accent);font-family:'JetBrains Mono',monospace;}
+.ti{background:var(--adim2);color:var(--amber);}
+.recnotes{font-size:11px;color:var(--tx3);margin-top:6px;}
+.recacts{display:flex;gap:5px;margin-top:9px;padding-top:9px;border-top:1px solid var(--border);}
+
+/* INCIDENTS */
+.incident{background:linear-gradient(135deg,rgba(255,179,71,.04),var(--card));border:1px solid rgba(255,179,71,.25);border-radius:var(--r);padding:13px;margin-bottom:9px;}
+.itype{font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--amber);margin-bottom:7px;}
+.iq{font-size:14px;color:var(--tx);font-weight:700;margin-bottom:9px;line-height:1.4;}
+.iopts{display:flex;flex-direction:column;gap:5px;}
+.iopt{
+  background:var(--card2);border:1.5px solid var(--border);border-radius:var(--rs);
+  padding:9px 12px;font-size:13px;color:var(--tx);cursor:pointer;
+  display:flex;align-items:center;gap:7px;font-family:'Nunito',sans-serif;font-weight:700;
+  transition:border-color .15s,background .15s;
+  touch-action:manipulation;
+}
+.iopt:active{border-color:var(--accent);background:var(--adim);}
+.idismiss{font-size:11px;color:var(--tx3);text-align:right;margin-top:7px;cursor:pointer;padding:4px 0;}
+
+/* STATS */
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:11px;}
+.sc{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:13px;}
+.sl{font-size:10px;color:var(--tx3);font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px;}
+.sv{font-size:24px;font-weight:800;font-family:'JetBrains Mono',monospace;line-height:1.1;}
+.sv.g{color:var(--accent);} .sv.b{color:var(--blue);} .sv.a{color:var(--amber);}
+.brow{margin-bottom:7px;}
+.btop{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;}
+.bname{font-weight:700;} .bnum{font-family:'JetBrains Mono',monospace;color:var(--tx2);}
+.btrack{height:4px;background:var(--card2);border-radius:2px;overflow:hidden;}
+.bfill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent),var(--blue));transition:width .5s ease;}
+.bfill.a{background:linear-gradient(90deg,var(--amber),var(--red));}
+
+/* MONTH NAV */
+.mnav{display:flex;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:11px;overflow:hidden;}
+.mbtn{background:none;border:none;color:var(--tx2);padding:11px 16px;font-size:18px;cursor:pointer;touch-action:manipulation;}
+.mlbl{flex:1;text-align:center;font-size:12px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--tx);}
+
+/* SEARCH */
+.swrap{position:relative;margin-bottom:10px;}
+.swrap .fi{padding-left:38px;}
+.sico{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--tx3);pointer-events:none;}
+
+/* FILTER SCROLL */
+.fscroll{display:flex;gap:5px;overflow-x:auto;margin-bottom:10px;padding-bottom:2px;scrollbar-width:none;}
+.fscroll::-webkit-scrollbar{display:none;}
+
+/* COTEJO */
+.uzone{border:2px dashed var(--border2);border-radius:var(--r);padding:24px 14px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:10px;touch-action:manipulation;}
+.uzone:active{border-color:var(--accent);background:var(--adim);}
+.uzone .ui{font-size:28px;margin-bottom:7px;} .uzone p{font-size:13px;color:var(--tx2);} .uzone small{font-size:11px;color:var(--tx3);}
+.ctw{overflow-x:auto;border-radius:var(--rs);border:1px solid var(--border);margin-top:10px;}
+.ct{width:100%;border-collapse:collapse;font-size:11px;min-width:440px;}
+.ct th{background:var(--card2);padding:8px 9px;text-align:left;color:var(--tx3);font-weight:800;font-size:10px;white-space:nowrap;}
+.ct td{padding:8px 9px;border-top:1px solid var(--border);white-space:nowrap;}
+.ct tr.ok td{background:rgba(45,212,160,.04);} .ct tr.wn td{background:rgba(255,179,71,.04);} .ct tr.ms td{background:rgba(255,79,107,.04);}
+
+/* EXPORT */
+.egrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.ecard{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 10px;text-align:center;cursor:pointer;transition:all .15s;touch-action:manipulation;}
+.ecard:active{border-color:var(--accent);background:var(--adim);}
+.ecard .ei{font-size:26px;margin-bottom:5px;} .ecard .en{font-size:12px;font-weight:800;} .ecard .ed{font-size:10px;color:var(--tx3);margin-top:2px;}
+
+/* ONBOARDING */
+.onb{
+  position:fixed;inset:0;z-index:900;
+  background:var(--bg);
+  display:flex;flex-direction:column;
+  padding:var(--sit) 0 var(--sib);
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+}
+.onb.hide{display:none;}
+.onb-inner{
+  flex:1;display:flex;flex-direction:column;
+  padding:24px 20px 32px;max-width:480px;margin:0 auto;width:100%;
+}
+.onb-logo{font-size:52px;text-align:center;margin-bottom:10px;}
+.onb-title{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--tx);text-align:center;margin-bottom:6px;}
+.onb-sub{font-size:14px;color:var(--tx2);text-align:center;line-height:1.5;margin-bottom:28px;}
+.onb-step{font-family:'Syne',sans-serif;font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);margin-bottom:16px;}
+.onb-label{font-size:13px;font-weight:800;color:var(--tx2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;}
+.cli-inputs{display:flex;flex-direction:column;gap:7px;margin-bottom:12px;}
+.cli-row{display:flex;align-items:center;gap:7px;}
+.cli-num{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--tx3);width:18px;flex-shrink:0;text-align:right;}
+.cli-inp{
+  flex:1;background:var(--card2);border:1.5px solid var(--border);
+  border-radius:var(--rs);padding:11px 13px;
+  color:var(--tx);font-size:15px;font-family:'Nunito',sans-serif;
+  outline:none;-webkit-appearance:none;transition:border-color .2s;
+}
+.cli-inp:focus{border-color:var(--accent);}
+.cli-inp::placeholder{color:var(--tx3);}
+.cli-inp:not(:placeholder-shown){border-color:rgba(0,229,176,.35);}
+.onb-hint{font-size:11px;color:var(--tx3);text-align:center;margin-bottom:24px;line-height:1.5;}
+.onb-btn{
+  width:100%;padding:15px;border-radius:var(--rs);border:none;
+  background:var(--accent);color:#050d0a;font-size:16px;font-weight:800;
+  font-family:'Nunito',sans-serif;cursor:pointer;
+  transition:opacity .15s,transform .15s;
+  -webkit-user-select:none;user-select:none;
+}
+.onb-btn:active{opacity:.85;transform:scale(.98);}
+.onb-btn:disabled{opacity:.4;cursor:not-allowed;}
+.onb-skip{font-size:12px;color:var(--tx3);text-align:center;margin-top:14px;cursor:pointer;padding:6px;}
+
+/* TOAST */
+.toast{
+  position:fixed;left:50%;
+  bottom:calc(64px + var(--sib) + 10px);
+  transform:translateX(-50%) translateY(8px);
+  background:var(--card2);border:1px solid var(--border2);
+  border-radius:22px;padding:9px 16px;
+  font-size:13px;font-weight:700;color:var(--tx);
+  z-index:999;opacity:0;transition:all .25s;
+  white-space:nowrap;box-shadow:0 6px 28px rgba(0,0,0,.5);
+  max-width:88vw;text-align:center;
+  pointer-events:none;
+}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.ok{border-color:var(--accent);color:var(--accent);}
+.toast.err{border-color:var(--red);color:var(--red);}
+.toast.warn{border-color:var(--amber);color:var(--amber);}
+
+/* DRAWER */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:400;align-items:flex-end;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);}
+.overlay.on{display:flex;}
+.drawer{
+  background:var(--bg2);border-radius:18px 18px 0 0;
+  border-top:1px solid var(--border2);
+  padding:14px 16px calc(18px + var(--sib));
+  width:100%;max-height:90dvh;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+.dhandle{width:34px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px;}
+.dtitle{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:14px;}
+
+/* MISC */
+.stitle{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;margin-bottom:12px;}
+.divider{border:none;border-top:1px solid var(--border);margin:14px 0;}
+.li{display:flex;align-items:center;justify-content:space-between;background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);padding:11px;margin-bottom:7px;}
+.lin{font-size:13px;font-weight:700;} .lis{font-size:10px;color:var(--tx3);margin-top:1px;}
+.empty{text-align:center;padding:32px 16px;}
+.empty .ei{font-size:42px;margin-bottom:9px;} .empty p{font-size:13px;color:var(--tx3);}
+
+/* iOS-specific scrolling fix */
+@supports (-webkit-touch-callout: none) {
+  .page{ -webkit-overflow-scrolling: touch; }
+}
+
+/* Android Chrome bottom nav fix */
+@media (display-mode: standalone) {
+  .bnav { padding-bottom: max(var(--sib), 8px); }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">🦷 DentTrack</div>
+  <div class="topright">
+    <span class="tot" id="hTot">€0</span>
+    <span class="ibadge" id="iBadge">!</span>
+  </div>
+</div>
+
+<!-- PAGES -->
+<div class="pages">
+
+<!-- ── VOZ ─────────────────────────────────────────────── -->
+<div class="page active" id="p-voz">
+
+  <!-- Auto-saved confirmation -->
+  <div class="assaved" id="asSaved">
+    <div class="asl">
+      <span>✅ Guardado automáticamente</span>
+      <span id="asTime" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--tx3)"></span>
+    </div>
+    <div class="asp" id="asPat"></div>
+    <div class="astags" id="asTags"></div>
+  </div>
+
+  <!-- Voice hero -->
+  <div class="vhero">
+    <div class="vstatus" id="vlbl">Pulsa para hablar</div>
+    <div class="vring-wrap">
+      <button class="vbtn" id="vbtn" ontouchstart="vtouch(event,'s')" ontouchend="vtouch(event,'e')" onmousedown="vtouch(event,'s')" onmouseup="vtouch(event,'e')">🎙️</button>
+      <div class="vring"></div><div class="vring2"></div>
+    </div>
+    <div class="vhint" id="vhint">Di: <em>"Paciente García, clínica Norte, empaste"</em></div>
+    <div class="vwave" id="vwave">
+      <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+      <div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div>
+    </div>
+    <div class="vtransc" id="vtransc"></div>
+    <div class="pbar" id="pbar">
+      <div class="ps" id="ps1"><div class="pd"></div>Transcribiendo audio...</div>
+      <div class="ps" id="ps2"><div class="pd"></div>Identificando clínica y paciente...</div>
+      <div class="ps" id="ps3"><div class="pd"></div>Normalizando tratamiento...</div>
+      <div class="ps" id="ps4"><div class="pd"></div>Guardando automáticamente...</div>
+    </div>
+  </div>
+
+  <!-- Manual form -->
+  <div class="card">
+    <div class="ctitle">✏️ Entrada manual</div>
+    <div class="field"><div class="flbl">Paciente</div><input class="fi" id="fPat" type="text" placeholder="Nombre del paciente" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false"></div>
+    <div class="field"><div class="flbl">Clínica</div><select class="fs" id="fCli"></select></div>
+    <div class="field">
+      <div class="flbl">Tratamiento</div>
+      <div class="chips" id="chTr"></div>
+      <input class="fi" id="fTr" type="text" placeholder="O escribe aquí..." autocomplete="off" autocorrect="off">
+    </div>
+    <div class="row2">
+      <div class="field"><div class="flbl">Precio €</div><input class="fi" id="fPri" type="number" placeholder="0.00" step="0.01" inputmode="decimal" min="0"></div>
+      <div class="field"><div class="flbl">Fecha</div><input class="fi" id="fDat" type="date"></div>
+    </div>
+    <div class="field"><div class="flbl">Notas</div><input class="fi" id="fNot" type="text" placeholder="Observaciones..." autocomplete="off"></div>
+    <button class="btn ba" onclick="saveM()" style="margin-top:4px">💾 Guardar registro</button>
+  </div>
+</div>
+
+<!-- ── REGISTROS ──────────────────────────────────────── -->
+<div class="page" id="p-reg">
+  <div class="stitle">Registros</div>
+  <div class="swrap"><span class="sico">🔍</span><input class="fi" id="srch" type="text" placeholder="Buscar..." oninput="renderRec()"></div>
+  <div class="fscroll" id="fbar"></div>
+  <div id="recList"></div>
+</div>
+
+<!-- ── INCIDENCIAS ─────────────────────────────────────── -->
+<div class="page" id="p-inc">
+  <div class="stitle">⚠️ Incidencias</div>
+  <p style="font-size:13px;color:var(--tx2);margin-bottom:12px;line-height:1.5">Registros guardados con datos ambiguos. Toca la opción correcta para completarlos.</p>
+  <div id="incList"></div>
+</div>
+
+<!-- ── RESUMEN ─────────────────────────────────────────── -->
+<div class="page" id="p-stats">
+  <div class="stitle">Resumen</div>
+  <div class="mnav">
+    <button class="mbtn" onclick="chM(-1)">◀</button>
+    <span class="mlbl" id="mlbl"></span>
+    <button class="mbtn" onclick="chM(1)">▶</button>
+  </div>
+  <div class="sgrid" id="sgrid"></div>
+  <div class="card"><div class="ctitle">🏥 Por clínica</div><div id="cbars"></div></div>
+  <div class="card"><div class="ctitle">💊 Por tratamiento</div><div id="tbars"></div></div>
+</div>
+
+<!-- ── COTEJO ─────────────────────────────────────────── -->
+<div class="page" id="p-cot">
+  <div class="stitle">Cotejo Clínica</div>
+  <div class="card">
+    <div class="ctitle">⚙️ Configurar</div>
+    <div class="field"><div class="flbl">Clínica</div><select class="fs" id="cotCli"></select></div>
+    <div class="field"><div class="flbl">Mes</div><input class="fi" id="cotMes" type="month"></div>
+    <div class="uzone" onclick="document.getElementById('xlsIn').click()">
+      <div class="ui">📊</div><p>Toca para subir Excel de la clínica</p><small>.xlsx · .xls · .csv</small>
+    </div>
+    <input type="file" id="xlsIn" accept=".xlsx,.xls,.csv" style="display:none" onchange="loadXls(event)">
+    <div id="xlsPrev"></div>
+    <button class="btn ba" onclick="runCotejo()" style="margin-top:8px">🔍 Ejecutar cotejo</button>
+  </div>
+  <div id="cotRes"></div>
+</div>
+
+<!-- ── CONFIG ─────────────────────────────────────────── -->
+<div class="page" id="p-cfg">
+  <div class="stitle">Configuración</div>
+
+  <!-- Instrucciones instalación -->
+  <div class="card" style="border-color:rgba(0,229,176,.2)">
+    <div class="ctitle" style="color:var(--accent)">📲 Instalar como App</div>
+    <div id="installInstr"></div>
+  </div>
+
+  <div class="card">
+    <div class="ctitle">📤 Exportar datos</div>
+    <div class="field"><div class="flbl">Clínica</div><select class="fs" id="expCli"><option value="">Todas</option></select></div>
+    <div class="row2">
+      <div class="field"><div class="flbl">Desde</div><input class="fi" id="expFrom" type="date"></div>
+      <div class="field"><div class="flbl">Hasta</div><input class="fi" id="expTo" type="date"></div>
+    </div>
+    <div class="egrid">
+      <div class="ecard" onclick="expXlsx()"><div class="ei">📊</div><div class="en">Excel</div><div class="ed">Hoja completa</div></div>
+      <div class="ecard" onclick="expCsv()"><div class="ei">📄</div><div class="en">CSV</div><div class="ed">Universal</div></div>
+      <div class="ecard" onclick="expJson()"><div class="ei">🗄️</div><div class="en">Backup JSON</div><div class="ed">Copia seguridad</div></div>
+      <div class="ecard" onclick="document.getElementById('jsonIn').click()"><div class="ei">📥</div><div class="en">Importar</div><div class="ed">Restaurar JSON</div></div>
+    </div>
+    <input type="file" id="jsonIn" accept=".json" style="display:none" onchange="impJson(event)">
+  </div>
+
+  <div class="card">
+    <div class="ctitle">🏥 Mis clínicas</div>
+    <div id="cliList"></div>
+    <div class="row2" style="margin-top:9px">
+      <input class="fi" id="newCli" type="text" placeholder="Nombre clínica..." autocorrect="off">
+      <button class="btn ba bsm" onclick="addCli()" style="padding:11px 14px">+ Añadir</button>
+    </div>
+    <div style="margin-top:13px">
+      <div class="ctitle" style="margin-bottom:6px">🏷️ Alias por clínica</div>
+      <p style="font-size:11px;color:var(--tx3);line-height:1.5;margin-bottom:7px">Variaciones de nombre que pronuncias para que la voz las reconozca.</p>
+      <select class="fs" id="aliSel" style="margin-bottom:7px" onchange="renderAliList()"></select>
+      <div id="aliList"></div>
+      <div class="row2" style="margin-top:7px">
+        <input class="fi" id="newAli" type="text" placeholder="Alias..." autocorrect="off">
+        <button class="btn bg bsm" onclick="addAli()" style="padding:11px 14px">+ Alias</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ctitle">💊 Tratamientos</div>
+    <div id="trtList"></div>
+    <div class="row2" style="margin-top:9px">
+      <input class="fi" id="newTrt" type="text" placeholder="Nombre tratamiento..." autocorrect="off">
+      <button class="btn ba bsm" onclick="addTrt()" style="padding:11px 14px">+ Añadir</button>
+    </div>
+  </div>
+
+  <div class="card" style="border-color:rgba(255,79,107,.18)">
+    <div class="ctitle" style="color:var(--red)">⚠️ Zona peligrosa</div>
+    <button class="btn bd" onclick="clearAll()">🗑️ Borrar todos los registros</button>
+  </div>
+</div>
+
+</div><!-- /pages -->
+
+<!-- BOTTOM NAV -->
+<div class="bnav">
+  <button class="bni active" id="bn-voz" onclick="gp('voz')"><span class="ico">🎙️</span>Registrar</button>
+  <button class="bni" id="bn-reg" onclick="gp('reg')"><span class="ico">📋</span>Registros</button>
+  <button class="bni" id="bn-inc" onclick="gp('inc')"><span class="ico">⚠️</span>Incidencias<div class="bdot" id="iDot"></div></button>
+  <button class="bni" id="bn-stats" onclick="gp('stats')"><span class="ico">📊</span>Resumen</button>
+  <button class="bni" id="bn-cfg" onclick="gp('cfg')"><span class="ico">⚙️</span>Config</button>
+</div>
+</div><!-- /app -->
+
+<!-- ONBOARDING -->
+<div class="onb" id="onbScreen">
+  <div class="onb-inner">
+    <div class="onb-logo">🦷</div>
+    <div class="onb-title">Bienvenido a DentTrack</div>
+    <div class="onb-sub">Antes de empezar, dinos en qué clínicas trabajas.<br>Puedes añadir o cambiarlas después en Configuración.</div>
+
+    <div class="onb-step">Tus clínicas</div>
+    <div class="onb-label">Añade hasta 10 clínicas donde trabajas</div>
+
+    <div class="cli-inputs" id="cliInputs"></div>
+
+    <div class="onb-hint">Rellena solo las que uses. Puedes dejar las demás en blanco.</div>
+
+    <button class="onb-btn" id="onbBtn" onclick="finishOnboarding()">Empezar →</button>
+    <div class="onb-skip" onclick="skipOnboarding()">Configurar más tarde</div>
+  </div>
+</div>
+
+<!-- EDIT DRAWER -->
+<div class="overlay" id="editOv">
+  <div class="drawer">
+    <div class="dhandle"></div>
+    <div class="dtitle">✏️ Editar registro</div>
+    <div class="field"><div class="flbl">Paciente</div><input class="fi" id="ePat" type="text" autocapitalize="words"></div>
+    <div class="field"><div class="flbl">Clínica</div><select class="fs" id="eCli"></select></div>
+    <div class="field"><div class="flbl">Tratamiento</div><input class="fi" id="eTrt" type="text"></div>
+    <div class="row2">
+      <div class="field"><div class="flbl">Precio €</div><input class="fi" id="ePri" type="number" step="0.01" inputmode="decimal"></div>
+      <div class="field"><div class="flbl">Fecha</div><input class="fi" id="eDat" type="date"></div>
+    </div>
+    <div class="field"><div class="flbl">Notas</div><input class="fi" id="eNot" type="text"></div>
+    <div class="row2" style="margin-top:4px">
+      <button class="btn ba" onclick="saveEdit()">Guardar</button>
+      <button class="btn bg" onclick="closeD()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ── STATE ──────────────────────────────────────────────────
+let records    = JSON.parse(localStorage.getItem('dt_rec')   || '[]');
+let clinics    = JSON.parse(localStorage.getItem('dt_cli')   || '[]');
+let aliases    = JSON.parse(localStorage.getItem('dt_ali')   || '{}');
+let treatments = JSON.parse(localStorage.getItem('dt_treat') || '["Empaste/Obturación","Extracción","Endodoncia","Limpieza/Profilaxis","Corona","Implante","Ortodoncia","Blanqueamiento","Revisión","Incrustación","Carilla","Prótesis parcial","Prótesis completa","Reconstrucción","Sellador de fisuras"]');
+let incidents  = JSON.parse(localStorage.getItem('dt_inc')   || '[]');
+
+let editId=null, filterCli='all', curMonth=new Date();
+let recognition=null, isRec=false, xlsData=[];
+
+// ── DEVICE DETECTION ────────────────────────────────────────
+const IS_IOS     = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const IS_ANDROID = /Android/.test(navigator.userAgent);
+const IS_SAFARI  = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+const IS_PWA     = window.matchMedia('(display-mode: standalone)').matches ||
+                   window.navigator.standalone === true;
+
+// ── SYNONYMS ───────────────────────────────────────────────
+const SYN = {
+  'empaste':'Empaste/Obturación','obturacion':'Empaste/Obturación','obturación':'Empaste/Obturación',
+  'reconstruccion':'Empaste/Obturación','reconstrucción':'Empaste/Obturación',
+  'composite':'Empaste/Obturación','amalgama':'Empaste/Obturación',
+  'restauracion':'Empaste/Obturación','restauración':'Empaste/Obturación',
+  'obturar':'Empaste/Obturación','relleno':'Empaste/Obturación','resina':'Empaste/Obturación',
+  'extraccion':'Extracción','extracción':'Extracción','exodoncia':'Extracción',
+  'sacar muela':'Extracción','sacar diente':'Extracción','arrancar':'Extracción',
+  'endodoncia':'Endodoncia','matar nervio':'Endodoncia','nervio':'Endodoncia',
+  'desvitalizar':'Endodoncia','conductos':'Endodoncia',
+  'limpieza':'Limpieza/Profilaxis','profilaxis':'Limpieza/Profilaxis',
+  'tartrectomia':'Limpieza/Profilaxis','tartrectomía':'Limpieza/Profilaxis',
+  'higiene':'Limpieza/Profilaxis','sarro':'Limpieza/Profilaxis',
+  'corona':'Corona','funda':'Corona','casquillo':'Corona',
+  'implante':'Implante','implantologia':'Implante','implantología':'Implante',
+  'ortodoncia':'Ortodoncia','brackets':'Ortodoncia','alineador':'Ortodoncia',
+  'invisalign':'Ortodoncia','ferula':'Ortodoncia','férula':'Ortodoncia',
+  'blanqueamiento':'Blanqueamiento','blanquear':'Blanqueamiento',
+  'revision':'Revisión','revisión':'Revisión','chequeo':'Revisión',
+  'control':'Revisión','visita':'Revisión','consulta':'Revisión',
+  'incrustacion':'Incrustación','incrustación':'Incrustación',
+  'overlay':'Incrustación','onlay':'Incrustación','inlay':'Incrustación',
+  'carilla':'Carilla','veneer':'Carilla','carillas':'Carilla',
+  'protesis':'Prótesis parcial','prótesis':'Prótesis parcial',
+  'dentadura':'Prótesis completa',
+  'sellador':'Sellador de fisuras','sellado':'Sellador de fisuras',
+  'periodoncia':'Periodoncia','curetaje':'Periodoncia','raspado':'Periodoncia',
+  'cirugia':'Cirugía oral','cirugía':'Cirugía oral',
+  'radiografia':'Radiografía','radiografía':'Radiografía','rx':'Radiografía',
+};
+
+function normT(txt) {
+  if(!txt) return '';
+  const low = txt.toLowerCase().trim();
+  if(SYN[low]) return SYN[low];
+  for(const[k,v] of Object.entries(SYN)) { if(low.includes(k)) return v; }
+  for(const t of treatments) {
+    const base = t.toLowerCase().split('/')[0];
+    if(t.toLowerCase().includes(low) || low.includes(base)) return t;
+  }
+  return txt.charAt(0).toUpperCase() + txt.slice(1);
+}
+
+function normC(txt) {
+  if(!txt) return null;
+  const low = txt.toLowerCase().trim();
+  for(const[cli,als] of Object.entries(aliases)) {
+    if(als.some(a => low.includes(a.toLowerCase()) || a.toLowerCase().includes(low))) return cli;
+  }
+  for(const c of clinics) {
+    const cl = c.toLowerCase();
+    if(low === cl || low.includes(cl) || cl.includes(low)) return c;
+  }
+  const words = low.split(/\s+/).filter(w => w.length > 2);
+  for(const c of clinics) {
+    const cw = c.toLowerCase().replace(/clínica|clinica/gi,'').trim().split(/\s+/);
+    if(words.some(w => cw.some(x => x.includes(w) || w.includes(x)))) return c;
+  }
+  return null;
+}
+
+// ── PERSIST ────────────────────────────────────────────────
+function persist() {
+  localStorage.setItem('dt_rec',   JSON.stringify(records));
+  localStorage.setItem('dt_cli',   JSON.stringify(clinics));
+  localStorage.setItem('dt_ali',   JSON.stringify(aliases));
+  localStorage.setItem('dt_treat', JSON.stringify(treatments));
+  localStorage.setItem('dt_inc',   JSON.stringify(incidents));
+  updateHdr(); updateBadge();
+}
+
+function updateHdr() {
+  const t = records.reduce((s,r) => s+(r.price||0), 0);
+  document.getElementById('hTot').textContent = '€'+(t>=1000?(t/1000).toFixed(1)+'k':t.toFixed(0));
+}
+
+function updateBadge() {
+  const n = incidents.length;
+  document.getElementById('iBadge').textContent = n;
+  document.getElementById('iBadge').classList.toggle('on', n>0);
+  document.getElementById('iDot').classList.toggle('on', n>0);
+}
+
+// ── NAV ────────────────────────────────────────────────────
+function gp(pg) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.bni').forEach(b => b.classList.remove('active'));
+  document.getElementById('p-'+pg).classList.add('active');
+  document.getElementById('bn-'+pg).classList.add('active');
+  if(pg==='reg')   { renderFbar(); renderRec(); }
+  if(pg==='stats') renderStats();
+  if(pg==='inc')   renderInc();
+  if(pg==='cfg')   renderCfg();
+}
+
+// ── MICROPHONE SETUP ───────────────────────────────────────
+// Strategy:
+// 1. Try Web Speech API (works on Android Chrome, iOS Safari 14.5+)
+// 2. If blocked, show platform-specific instructions
+// 3. MediaRecorder fallback for manual audio recording
+
+let speechSupported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+let mediaRecorder = null;
+let audioChunks = [];
+let useMediaFallback = false;
+
+// ── VOICE SETUP ─────────────────────────────────────────────
+// El micrófono se pide al primer toque. Si el usuario acepta,
+// el navegador lo recuerda para siempre en esta URL.
+// Requiere HTTPS — funciona en GitHub Pages, no en file://
+
+function initVoice() {
+  if(!speechSupported) {
+    setVStatus('Usa el formulario ↓', 'err');
+    setVHint('Tu navegador no soporta voz. ' + (IS_IOS ? 'Usa Safari.' : 'Usa Chrome.'));
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = 'es-ES';
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    setVBtn('rec');
+    setVStatus('🔴 Grabando... suelta para terminar', 'rec');
+    document.getElementById('vwave').classList.add('on');
+    document.getElementById('vtransc').classList.remove('on');
+    document.getElementById('pbar').classList.remove('on');
+    document.getElementById('asSaved').classList.remove('on');
+  };
+
+  recognition.onresult = e => {
+    let final = '', interim = '';
+    for(const r of e.results) {
+      if(r.isFinal) final += r[0].transcript;
+      else interim += r[0].transcript;
+    }
+    const txt = final || interim;
+    const tb = document.getElementById('vtransc');
+    tb.textContent = txt; tb.classList.add('on');
+    if(final) processVoice(final.trim());
+  };
+
+  recognition.onerror = e => {
+    stopRecUI();
+    if(e.error === 'not-allowed' || e.error === 'permission-denied') {
+      // El usuario denegó o la URL no es HTTPS
+      setVBtn('idle');
+      setVStatus('Micrófono bloqueado', 'err');
+      showMicDeniedOverlay();
+    } else if(e.error === 'no-speech') {
+      toast('No te he escuchado. Inténtalo de nuevo.', 'warn');
+    } else if(e.error === 'network') {
+      toast('Sin conexión. Usa el formulario.', 'warn');
+    } else {
+      toast('Error de voz. Usa el formulario.', 'warn');
+    }
+  };
+
+  recognition.onend = () => stopRecUI();
+}
+
+// Overlay que aparece SOLO si el permiso fue denegado explícitamente
+function showMicDeniedOverlay() {
+  let ov = document.getElementById('micDeniedOv');
+  if(!ov) {
+    ov = document.createElement('div');
+    ov.id = 'micDeniedOv';
+    ov.style.cssText = `
+      position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:600;
+      display:flex;align-items:flex-end;backdrop-filter:blur(6px);
+    `;
+    const box = document.createElement('div');
+    box.style.cssText = `
+      background:#0d1219;border-top:2px solid #ffb347;border-radius:20px 20px 0 0;
+      padding:22px 20px calc(24px + env(safe-area-inset-bottom));width:100%;
+    `;
+    const steps = IS_IOS
+      ? `<li>Ve a <strong>Ajustes</strong> del iPhone → Safari</li>
+         <li>Toca <strong>Micrófono</strong> → elige <strong>Permitir</strong></li>
+         <li>Vuelve aquí y pulsa el botón de voz</li>`
+      : `<li>Toca el <strong>candado 🔒</strong> en la barra del navegador</li>
+         <li>Toca <strong>Permisos</strong> → <strong>Micrófono</strong> → <strong>Permitir</strong></li>
+         <li>Recarga la página y pulsa el botón de voz</li>`;
+    box.innerHTML = `
+      <div style="font-size:13px;font-weight:800;color:#ffb347;margin-bottom:10px">🎤 Activa el micrófono</div>
+      <ol style="padding-left:18px;font-size:13px;color:#ecf2f8;line-height:1.9;margin-bottom:16px">${steps}</ol>
+      <button onclick="document.getElementById('micDeniedOv').remove()" style="
+        width:100%;padding:13px;border-radius:9px;border:none;
+        background:#00e5b0;color:#050d0a;font-size:15px;font-weight:800;
+        font-family:'Nunito',sans-serif;cursor:pointer;">Entendido</button>
+    `;
+    ov.appendChild(box);
+    document.body.appendChild(ov);
+  }
+  ov.style.display = 'flex';
+}
+
+// ── VOICE TOUCH HANDLER ─────────────────────────────────────
+function vtouch(e, action) {
+  e.preventDefault();
+  e.stopPropagation();
+  if(action === 's') startRec();
+  else stopRec();
+}
+
+function startRec() {
+  if(!recognition) {
+    toast(IS_IOS ? 'Usa Safari para la voz' : 'Usa Chrome para la voz', 'warn');
+    return;
+  }
+  if(isRec) return;
+  isRec = true;
+  // Al llamar recognition.start() el navegador lanza el diálogo de permiso
+  // si aún no se ha concedido. Si el usuario acepta, queda guardado para siempre.
+  try {
+    recognition.start();
+  } catch(err) {
+    isRec = false;
+    if(err.name === 'InvalidStateError') {
+      try { recognition.stop(); } catch(e2) {}
+      setTimeout(() => startRec(), 400);
+    }
+  }
+}
+
+function stopRec() {
+  if(!isRec) return;
+  try { recognition.stop(); } catch(e) {}
+  stopRecUI();
+}
+
+function stopRecUI() {
+  isRec = false;
+  setVBtn('idle');
+  setVStatus('Pulsa para hablar', '');
+  document.getElementById('vwave').classList.remove('on');
+}
+
+function setVBtn(state) {
+  const b = document.getElementById('vbtn');
+  b.className = 'vbtn' + (state==='rec'?' rec':state==='proc'?' proc':state==='ok'?' ok':'');
+  b.textContent = state==='rec' ? '⏹️' : state==='proc' ? '⏳' : '🎙️';
+}
+
+function setVStatus(txt, cls='') {
+  const el = document.getElementById('vlbl');
+  el.textContent = txt;
+  el.className = 'vstatus' + (cls?' '+cls:'');
+}
+
+function setVHint(txt) {
+  document.getElementById('vhint').textContent = txt;
+}
+
+// ── PROCESS VOICE ──────────────────────────────────────────
+async function processVoice(text) {
+  setVBtn('proc');
+  setVStatus('Procesando...', 'proc');
+  const pb = document.getElementById('pbar');
+  pb.classList.add('on');
+
+  const setS = (i, done=false) => {
+    ['ps1','ps2','ps3','ps4'].forEach((s,j) => {
+      const el = document.getElementById(s);
+      el.className = 'ps' + (j<i?' done' : j===i&&!done?' go' : j===i?' done' : '');
+    });
+  };
+
+  setS(0); await delay(320);
+  setS(1);
+  const parsed = parseVoice(text);
+  await delay(260);
+  setS(2);
+  const nc = normC(parsed.clinic || '');
+  const nt = normT(parsed.treatment || '');
+  await delay(240);
+  setS(3);
+
+  const rec = {
+    id: Date.now(),
+    patient: parsed.patient || '',
+    clinic: nc || (parsed.clinic || ''),
+    treatment: nt,
+    price: parsed.price || 0,
+    date: new Date().toISOString().slice(0,10),
+    notes: '',
+    createdAt: new Date().toISOString(),
+    fromVoice: true,
+  };
+  records.push(rec);
+
+  const incs = [];
+  if(!rec.patient)
+    incs.push({id: uid(), recId:rec.id, type:'no-patient', msg:'¿Cómo se llama el paciente?', opts:[]});
+  if(!nc && parsed.clinic)
+    incs.push({id: uid(), recId:rec.id, type:'unk-cli', msg:`No reconocí la clínica "${parsed.clinic}". ¿Cuál es?`, opts:clinics});
+  else if(!nc && !parsed.clinic)
+    incs.push({id: uid(), recId:rec.id, type:'no-cli', msg:'¿En qué clínica fue el tratamiento?', opts:clinics});
+  if(!rec.treatment)
+    incs.push({id: uid(), recId:rec.id, type:'no-treat', msg:'¿Qué tratamiento realizaste?', opts:treatments.slice(0,9)});
+
+  incs.forEach(i => incidents.push(i));
+  persist();
+
+  await delay(200);
+  pb.classList.remove('on');
+  setVBtn('ok');
+  setVStatus('✅ Guardado', 'ok');
+  setTimeout(() => setVStatus('Pulsa para hablar', ''), 2000);
+
+  showAS(rec);
+  if(incs.length) toast(`Guardado con ${incs.length} incidencia(s) ⚠️`, 'warn');
+  else toast('✅ Registro guardado automáticamente', 'ok');
+}
+
+function parseVoice(text) {
+  const low = text.toLowerCase();
+  let patient='', clinic='', treatment='', price=0;
+
+  // Patient extraction
+  const pm = text.match(/(?:paciente|para|a ver|le hecho a|le he hecho a|para el|para la)\s+([A-ZÁÉÍÓÚÑa-záéíóúñ][a-záéíóúñ]+(?: [A-ZÁÉÍÓÚÑa-záéíóúñ][a-záéíóúñ]+)*)/i);
+  if(pm) patient = pm[1];
+
+  // Clinic extraction
+  for(const c of clinics) {
+    const cl = c.toLowerCase().replace(/clínica|clinica/gi,'').trim();
+    if(low.includes(c.toLowerCase()) || (cl.length > 2 && low.includes(cl))) { clinic=c; break; }
+    const als = aliases[c] || [];
+    if(als.some(a => low.includes(a.toLowerCase()))) { clinic=c; break; }
+  }
+  if(!clinic) {
+    const cm = text.match(/cl[ií]nica\s+([\w\sáéíóúñ]+?)(?:\s*,|\s+(?:empaste|extracción|endodoncia|limpieza|corona|implante|revisión|blanqueamiento|obturación)|$)/i);
+    if(cm) clinic = cm[1].trim();
+  }
+
+  // Treatment extraction
+  for(const[k,v] of Object.entries(SYN)) {
+    if(low.includes(k)) { treatment=v; break; }
+  }
+  if(!treatment) {
+    for(const t of treatments) {
+      if(low.includes(t.toLowerCase().split('/')[0].toLowerCase())) { treatment=t; break; }
+    }
+  }
+
+  // Price extraction
+  const prm = text.match(/(\d+(?:[.,]\d{1,2})?)\s*(?:euro|€|eur)/i);
+  if(prm) price = parseFloat(prm[1].replace(',','.'));
+
+  // Fallback patient from capitalized words
+  if(!patient) {
+    const caps = [...text.matchAll(/\b([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,}(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})?)\b/g)]
+      .map(m => m[1])
+      .filter(w => !clinics.some(c => c.toLowerCase().includes(w.toLowerCase())))
+      .filter(w => !Object.keys(SYN).some(k => k.includes(w.toLowerCase())))
+      .filter(w => !['Paciente','Clínica','Clinica','Para','Doctor','Hecho','Esta','Este','Que'].includes(w));
+    if(caps.length) patient = caps.slice(0,2).join(' ');
+  }
+
+  return { patient, clinic, treatment, price };
+}
+
+function showAS(rec) {
+  document.getElementById('asPat').textContent = '👤 ' + (rec.patient || 'Paciente sin nombre');
+  document.getElementById('asTime').textContent = new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});
+  const t = document.getElementById('asTags'); t.innerHTML = '';
+  if(rec.clinic)    t.innerHTML += `<span class="tag tc">🏥 ${rec.clinic}</span>`;
+  if(rec.treatment) t.innerHTML += `<span class="tag tt">💊 ${rec.treatment}</span>`;
+  if(rec.price)     t.innerHTML += `<span class="tag tp">€${rec.price.toFixed(2)}</span>`;
+  document.getElementById('asSaved').classList.add('on');
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+function uid() { return Date.now() + Math.random(); }
+
+// ── MANUAL SAVE ────────────────────────────────────────────
+function saveM() {
+  const pat = document.getElementById('fPat').value.trim();
+  const cli = document.getElementById('fCli').value;
+  const trt = document.getElementById('fTr').value.trim();
+  const pri = parseFloat(document.getElementById('fPri').value) || 0;
+  const dat = document.getElementById('fDat').value;
+  const not = document.getElementById('fNot').value.trim();
+  if(!pat||!cli||!trt) { toast('Rellena paciente, clínica y tratamiento','err'); return; }
+  records.push({id:Date.now(),patient:pat,clinic:cli,treatment:normT(trt),price:pri,date:dat,notes:not,createdAt:new Date().toISOString()});
+  persist();
+  // Reset
+  ['fPat','fTr','fPri','fNot'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('fCli').value='';
+  document.getElementById('fDat').value=today();
+  document.querySelectorAll('#chTr .chip').forEach(c => c.classList.remove('sel'));
+  toast('✅ Guardado','ok');
+}
+
+// ── RECORDS ────────────────────────────────────────────────
+function renderFbar() {
+  document.getElementById('fbar').innerHTML =
+    `<div class="chip ${filterCli==='all'?'sel':''}" onclick="setF('all',this)">Todos</div>` +
+    clinics.map(c => `<div class="chip ${filterCli===c?'sel':''}" onclick="setF('${eq(c)}',this)">${c}</div>`).join('');
+}
+
+function setF(f, el) {
+  filterCli = f;
+  document.querySelectorAll('#fbar .chip').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel'); renderRec();
+}
+
+function renderRec() {
+  const q = (document.getElementById('srch')?.value||'').toLowerCase();
+  const list = records.filter(r => {
+    if(filterCli!=='all' && r.clinic!==filterCli) return false;
+    return !q || r.patient.toLowerCase().includes(q) || r.clinic.toLowerCase().includes(q) || r.treatment.toLowerCase().includes(q);
+  }).sort((a,b) => new Date(b.date)-new Date(a.date));
+  const el = document.getElementById('recList');
+  if(!list.length) { el.innerHTML=`<div class="empty"><div class="ei">📋</div><p>${q?'Sin resultados':'Sin registros aún'}</p></div>`; return; }
+  el.innerHTML = list.map(r => `
+    <div class="rec">
+      <div class="rectop">
+        <div class="recname">👤 ${r.patient||'Sin nombre'}</div>
+        <div class="recdate">${fd(r.date)}</div>
+      </div>
+      <div class="rectags">
+        ${r.clinic?`<span class="tag tc">🏥 ${r.clinic}</span>`:''}
+        ${r.treatment?`<span class="tag tt">💊 ${r.treatment}</span>`:''}
+        ${r.price?`<span class="tag tp">€${r.price.toFixed(2)}</span>`:''}
+        ${incidents.some(i=>i.recId===r.id)?`<span class="tag ti">⚠️</span>`:''}
+      </div>
+      ${r.notes?`<div class="recnotes">📝 ${r.notes}</div>`:''}
+      <div class="recacts">
+        <button class="btn bg bxs" onclick="openEdit(${r.id})">✏️ Editar</button>
+        <button class="btn bd bxs" onclick="delRec(${r.id})">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+
+// ── INCIDENTS ──────────────────────────────────────────────
+function renderInc() {
+  const el = document.getElementById('incList');
+  if(!incidents.length) { el.innerHTML=`<div class="empty"><div class="ei">✅</div><p>Sin incidencias. ¡Todo en orden!</p></div>`; return; }
+  el.innerHTML = incidents.map(inc => `
+    <div class="incident" id="inc-${inc.id}">
+      <div class="itype">⚠️ Necesita revisión</div>
+      <div class="iq">${inc.msg}</div>
+      <div class="iopts">
+        ${(inc.opts||[]).map(opt => `
+          <div class="iopt" onclick="resolveInc('${inc.id}','${inc.type}','${eq(opt)}')">
+            <span>${inc.type.includes('cli')?'🏥':inc.type.includes('treat')?'💊':'👤'}</span>${opt}
+          </div>`).join('')}
+        <div class="iopt" onclick="resolveManual('${inc.id}','${inc.type}')">
+          <span>✏️</span>Escribir manualmente
+        </div>
+      </div>
+      <div class="idismiss" onclick="dismissInc('${inc.id}')">✕ Descartar</div>
+    </div>`).join('');
+}
+
+function resolveInc(id, type, val) {
+  const inc = incidents.find(i => i.id==id); if(!inc) return;
+  const rec = records.find(r => r.id===inc.recId); if(!rec) return;
+  if(type==='no-patient') rec.patient = val;
+  if(type==='unk-cli'||type==='no-cli') rec.clinic = val;
+  if(type==='no-treat') rec.treatment = val;
+  incidents = incidents.filter(i => i.id!=id);
+  persist(); renderInc(); toast('✅ Resuelto','ok');
+}
+
+function resolveManual(id, type) {
+  const msg = type==='no-patient'?'Nombre del paciente:':type.includes('cli')?'Clínica:':'Tratamiento:';
+  const val = prompt(msg);
+  if(val && val.trim()) resolveInc(id, type, val.trim());
+}
+
+function dismissInc(id) {
+  incidents = incidents.filter(i => i.id!=id);
+  persist(); renderInc();
+}
+
+// ── STATS ──────────────────────────────────────────────────
+function chM(d) { curMonth.setMonth(curMonth.getMonth()+d); updateMlbl(); renderStats(); }
+function updateMlbl() {
+  document.getElementById('mlbl').textContent =
+    curMonth.toLocaleString('es',{month:'long',year:'numeric'}).toUpperCase();
+}
+function renderStats() {
+  const y=curMonth.getFullYear(), m=curMonth.getMonth();
+  const mr = records.filter(r => { const d=new Date(r.date); return d.getFullYear()===y && d.getMonth()===m; });
+  const tot = mr.reduce((s,r) => s+(r.price||0), 0);
+  const pats = new Set(mr.map(r => r.patient)).size;
+  const avg = mr.length ? tot/mr.length : 0;
+  document.getElementById('sgrid').innerHTML = `
+    <div class="sc"><div class="sl">Producción</div><div class="sv g">€${tot.toFixed(0)}</div></div>
+    <div class="sc"><div class="sl">Tratamientos</div><div class="sv b">${mr.length}</div></div>
+    <div class="sc"><div class="sl">Pacientes</div><div class="sv a">${pats}</div></div>
+    <div class="sc"><div class="sl">Ticket medio</div><div class="sv g">€${avg.toFixed(0)}</div></div>`;
+  const cm={};
+  mr.forEach(r => { if(!cm[r.clinic]) cm[r.clinic]={n:0,t:0}; cm[r.clinic].n++; cm[r.clinic].t+=r.price||0; });
+  const mx = Math.max(...Object.values(cm).map(v=>v.n), 1);
+  document.getElementById('cbars').innerHTML = Object.entries(cm).sort((a,b)=>b[1].t-a[1].t).map(([n,v]) =>
+    `<div class="brow"><div class="btop"><div class="bname">🏥 ${n}</div><div class="bnum">${v.n}·€${v.t.toFixed(0)}</div></div>
+     <div class="btrack"><div class="bfill" style="width:${(v.n/mx*100).toFixed(0)}%"></div></div></div>`
+  ).join('') || '<p style="font-size:13px;color:var(--tx3)">Sin datos este mes</p>';
+  const tm={};
+  mr.forEach(r => { tm[r.treatment]=(tm[r.treatment]||0)+1; });
+  const mt = Math.max(...Object.values(tm), 1);
+  document.getElementById('tbars').innerHTML = Object.entries(tm).sort((a,b)=>b[1]-a[1]).map(([n,c]) =>
+    `<div class="brow"><div class="btop"><div class="bname">💊 ${n}</div><div class="bnum">${c}x</div></div>
+     <div class="btrack"><div class="bfill a" style="width:${(c/mt*100).toFixed(0)}%"></div></div></div>`
+  ).join('');
+}
+
+// ── COTEJO ─────────────────────────────────────────────────
+function loadXls(e) {
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const wb = XLSX.read(ev.target.result,{type:'binary'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      xlsData = XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      document.getElementById('xlsPrev').innerHTML =
+        `<div style="background:var(--adim);border:1px solid var(--aglow);border-radius:8px;padding:9px;font-size:12px;color:var(--accent);margin-top:8px">
+          ✅ ${xlsData.length-1} filas · ${xlsData[0]?.filter(Boolean).join(', ')||'—'}
+        </div>`;
+      toast('Excel importado','ok');
+    } catch(err) { toast('Error al leer archivo','err'); }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function runCotejo() {
+  const cli = document.getElementById('cotCli').value;
+  const mes = document.getElementById('cotMes').value;
+  if(!cli) { toast('Selecciona clínica','err'); return; }
+  if(!xlsData.length) { toast('Sube el Excel primero','err'); return; }
+  const [y,m] = mes.split('-').map(Number);
+  const myR = records.filter(r => { const d=new Date(r.date); return r.clinic===cli && d.getFullYear()===y && d.getMonth()===m-1; });
+  const hdrs = xlsData[0].map(h => String(h).toLowerCase());
+  const pC = hdrs.findIndex(h => h.includes('paciente')||h.includes('nombre'));
+  const tC = hdrs.findIndex(h => h.includes('tratamiento')||h.includes('concepto')||h.includes('servicio'));
+  const prC = hdrs.findIndex(h => h.includes('precio')||h.includes('importe')||h.includes('total')||h.includes('honorario'));
+  const cRows = xlsData.slice(1).filter(r => r.some(c => c!==''));
+  const used=new Set(), rows=[];
+  let ok=0, wn=0, onlyMe=0, onlyCli=0;
+
+  myR.forEach(r => {
+    const ci = cRows.findIndex((cr,i) => {
+      if(used.has(i)) return false;
+      const cp = pC>=0 ? String(cr[pC]).toLowerCase() : '';
+      const fn = r.patient.toLowerCase().split(' ')[0];
+      return cp && (cp.includes(fn) || fn.includes(cp.split(' ')[0]));
+    });
+    if(ci >= 0) {
+      used.add(ci); const cr=cRows[ci];
+      const cp = prC>=0 ? parseFloat(String(cr[prC]).replace(',','.').replace(/[€$\s]/g,''))||0 : 0;
+      const match = Math.abs((r.price||0)-cp) < 1;
+      if(match) ok++; else wn++;
+      rows.push({st:match?'ok':'wn', mp:r.patient, mt:r.treatment, mpr:r.price||0, cp:pC>=0?cr[pC]:'', ct:tC>=0?cr[tC]:'', cpr:cp});
+    } else {
+      onlyMe++;
+      rows.push({st:'ms', mp:r.patient, mt:r.treatment, mpr:r.price||0, cp:'—', ct:'—', cpr:0});
+    }
+  });
+  cRows.forEach((cr,i) => {
+    if(!used.has(i)) {
+      onlyCli++;
+      const cp = prC>=0 ? parseFloat(String(cr[prC]).replace(',','.').replace(/[€$\s]/g,''))||0 : 0;
+      rows.push({st:'ms-c', mp:'—', mt:'—', mpr:0, cp:pC>=0?cr[pC]:'?', ct:tC>=0?cr[tC]:'?', cpr:cp});
+    }
+  });
+
+  const myTot = myR.reduce((s,r)=>s+(r.price||0),0);
+  const cTot  = cRows.reduce((s,cr)=>{ const v=prC>=0?parseFloat(String(cr[prC]).replace(',','.').replace(/[€$\s]/g,''))||0:0; return s+v; },0);
+  const diff  = myTot-cTot;
+
+  document.getElementById('cotRes').innerHTML = `
+    <div class="sgrid" style="margin-top:10px">
+      <div class="sc"><div class="sl">✅ Coinciden</div><div class="sv g">${ok}</div></div>
+      <div class="sc"><div class="sl">⚠️ Precio distinto</div><div class="sv a">${wn}</div></div>
+      <div class="sc"><div class="sl">❌ Solo en mis notas</div><div class="sv" style="color:var(--red)">${onlyMe}</div></div>
+      <div class="sc"><div class="sl">❓ Solo en clínica</div><div class="sv b">${onlyCli}</div></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">💰 Diferencia total</div>
+      <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap">
+        <div><div style="font-size:10px;color:var(--tx3)">Mis registros</div><div style="font-family:'JetBrains Mono',monospace;font-size:18px;color:var(--accent)">€${myTot.toFixed(2)}</div></div>
+        <div><div style="font-size:10px;color:var(--tx3)">Clínica</div><div style="font-family:'JetBrains Mono',monospace;font-size:18px;color:var(--blue)">€${cTot.toFixed(2)}</div></div>
+        <div><div style="font-size:10px;color:var(--tx3)">Diferencia</div><div style="font-family:'JetBrains Mono',monospace;font-size:18px;color:${Math.abs(diff)<1?'var(--green)':'var(--red)'}">€${diff.toFixed(2)}</div></div>
+      </div>
+    </div>
+    <div class="ctw"><table class="ct">
+      <thead><tr><th></th><th>Mi Paciente</th><th>Mi Trat.</th><th>Mi €</th><th>Cli. Pac.</th><th>Cli. €</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr class="${r.st==='ok'?'ok':r.st==='wn'?'wn':'ms'}">
+        <td>${r.st==='ok'?'✅':r.st==='wn'?'⚠️':'❌'}</td>
+        <td>${r.mp}</td><td style="max-width:80px;overflow:hidden;text-overflow:ellipsis">${r.mt}</td>
+        <td style="font-family:'JetBrains Mono',monospace">€${r.mpr.toFixed(2)}</td>
+        <td>${r.cp}</td>
+        <td style="font-family:'JetBrains Mono',monospace;${r.st==='wn'?'color:var(--amber)':''}">€${r.cpr.toFixed(2)}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+    <button class="btn bb" style="margin-top:9px" onclick='expCotejoXls(${JSON.stringify(rows)})'>📊 Exportar informe</button>`;
+}
+
+function expCotejoXls(rows) {
+  const data=[['Estado','Mi Paciente','Mi Tratamiento','Mi Precio €','Clínica Paciente','Clínica Tratamiento','Clínica Precio €','Diferencia €']];
+  rows.forEach(r=>data.push([r.st==='ok'?'Coincide':r.st==='wn'?'Precio diferente':r.st==='ms'?'Solo en mis registros':'Solo en clínica',r.mp,r.mt,r.mpr,r.cp,r.ct,r.cpr,(r.mpr-r.cpr).toFixed(2)]));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'Cotejo');
+  XLSX.writeFile(wb,`cotejo_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// ── EDIT ──────────────────────────────────────────────────
+function openEdit(id) {
+  editId=id; const r=records.find(r=>r.id===id); if(!r) return;
+  document.getElementById('ePat').value=r.patient;
+  document.getElementById('eTrt').value=r.treatment;
+  document.getElementById('ePri').value=r.price||'';
+  document.getElementById('eDat').value=r.date;
+  document.getElementById('eNot').value=r.notes||'';
+  document.getElementById('eCli').innerHTML=clinics.map(c=>`<option value="${c}" ${c===r.clinic?'selected':''}>${c}</option>`).join('');
+  document.getElementById('editOv').classList.add('on');
+}
+function saveEdit() {
+  const r=records.find(r=>r.id===editId); if(!r) return;
+  r.patient=document.getElementById('ePat').value.trim();
+  r.clinic=document.getElementById('eCli').value;
+  r.treatment=document.getElementById('eTrt').value.trim();
+  r.price=parseFloat(document.getElementById('ePri').value)||0;
+  r.date=document.getElementById('eDat').value;
+  r.notes=document.getElementById('eNot').value.trim();
+  persist(); closeD(); renderRec(); toast('✅ Actualizado','ok');
+}
+function closeD() { document.getElementById('editOv').classList.remove('on'); }
+document.getElementById('editOv').addEventListener('click', e => { if(e.target===document.getElementById('editOv')) closeD(); });
+
+function delRec(id) {
+  if(!confirm('¿Eliminar este registro?')) return;
+  records=records.filter(r=>r.id!==id); incidents=incidents.filter(i=>i.recId!==id);
+  persist(); renderRec(); toast('Eliminado','');
+}
+
+// ── CONFIG ────────────────────────────────────────────────
+function renderCfg() {
+  renderAllDD(); renderCliList(); renderTrtList(); renderAliList(); renderInstallInstr();
+}
+
+function renderInstallInstr() {
+  const el = document.getElementById('installInstr');
+  if(IS_PWA) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--accent);font-weight:700">✅ Ya instalada como app en este dispositivo</p>';
+    return;
+  }
+  if(IS_IOS) {
+    el.innerHTML = `
+      <p style="font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:8px">Para instalar DentTrack como app en iPhone/iPad (requiere Safari):</p>
+      <ol style="padding-left:16px;font-size:12px;color:var(--tx);line-height:1.8">
+        <li>Abre este archivo en <strong style="color:var(--accent)">Safari</strong> (no Chrome)</li>
+        <li>Toca el botón <strong>Compartir</strong> 📤 (abajo del todo en Safari)</li>
+        <li>Desplázate y toca <strong>"Añadir a pantalla de inicio"</strong></li>
+        <li>Toca <strong>"Añadir"</strong> arriba a la derecha</li>
+      </ol>
+      <p style="font-size:11px;color:var(--tx3);margin-top:8px">⚠️ El micrófono funciona mejor desde Safari en iOS.</p>`;
+  } else if(IS_ANDROID) {
+    el.innerHTML = `
+      <p style="font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:8px">Para instalar DentTrack como app en Android (requiere Chrome):</p>
+      <ol style="padding-left:16px;font-size:12px;color:var(--tx);line-height:1.8">
+        <li>Abre este archivo en <strong style="color:var(--accent)">Google Chrome</strong></li>
+        <li>Toca el menú ⋮ (tres puntos arriba a la derecha)</li>
+        <li>Toca <strong>"Añadir a pantalla de inicio"</strong></li>
+        <li>Confirma tocando <strong>"Añadir"</strong></li>
+      </ol>
+      <p style="font-size:11px;color:var(--tx3);margin-top:8px">💡 También puedes tocar el banner de instalación que aparece abajo.</p>`;
+  } else {
+    el.innerHTML = `
+      <p style="font-size:12px;color:var(--tx2);line-height:1.6">
+        En el menú del navegador busca <strong>"Añadir a pantalla de inicio"</strong> o <strong>"Instalar app"</strong>.
+      </p>`;
+  }
+}
+
+function renderAllDD() {
+  const opts = clinics.map(c => `<option value="${c}">${c}</option>`).join('');
+  ['fCli','cotCli'].forEach(id => {
+    const el = document.getElementById(id); if(!el) return;
+    el.innerHTML = `<option value="">— Seleccionar —</option>` + opts;
+  });
+  const expCli = document.getElementById('expCli');
+  if(expCli) expCli.innerHTML = `<option value="">Todas</option>` + opts;
+  const aliSel = document.getElementById('aliSel');
+  if(aliSel) aliSel.innerHTML = opts;
+  renderChips(); renderFbar();
+}
+
+function renderChips() {
+  document.getElementById('chTr').innerHTML = treatments.map(t =>
+    `<div class="chip" onclick="pickT('${eq(t)}')">${t}</div>`).join('');
+}
+function pickT(t) {
+  document.getElementById('fTr').value = t;
+  document.querySelectorAll('#chTr .chip').forEach(c => c.classList.toggle('sel', c.textContent===t));
+}
+
+function renderCliList() {
+  const el = document.getElementById('cliList'); if(!el) return;
+  el.innerHTML = clinics.map((c,i) => `
+    <div class="li">
+      <div><div class="lin">🏥 ${c}</div><div class="lis">${records.filter(r=>r.clinic===c).length} registros · ${(aliases[c]||[]).length} alias</div></div>
+      <button class="btn bd bxs" onclick="removeCli(${i})">✕</button>
+    </div>`).join('');
+}
+function addCli() {
+  const v = document.getElementById('newCli').value.trim();
+  if(!v||clinics.includes(v)) { toast('Ya existe o vacío','err'); return; }
+  clinics.push(v); document.getElementById('newCli').value='';
+  persist(); renderCfg(); toast('✅ Clínica añadida','ok');
+}
+function removeCli(i) {
+  if(!confirm(`¿Eliminar ${clinics[i]}?`)) return;
+  delete aliases[clinics[i]]; clinics.splice(i,1);
+  persist(); renderCfg();
+}
+
+function renderAliList() {
+  const sel = document.getElementById('aliSel')?.value; if(!sel) return;
+  const als = aliases[sel]||[];
+  document.getElementById('aliList').innerHTML = als.length ?
+    als.map((a,i) => `<div class="li" style="padding:8px 10px"><div class="lin" style="font-size:12px">🏷️ ${a}</div><button class="btn bd bxs" onclick="removeAli('${eq(sel)}',${i})">✕</button></div>`).join('') :
+    '<p style="font-size:11px;color:var(--tx3)">Sin alias</p>';
+}
+function addAli() {
+  const cli = document.getElementById('aliSel').value;
+  const v   = document.getElementById('newAli').value.trim();
+  if(!cli||!v) return;
+  if(!aliases[cli]) aliases[cli]=[];
+  if(!aliases[cli].includes(v)) aliases[cli].push(v);
+  document.getElementById('newAli').value='';
+  persist(); renderAliList(); toast('✅ Alias añadido','ok');
+}
+function removeAli(cli,i) {
+  if(aliases[cli]) { aliases[cli].splice(i,1); persist(); renderAliList(); }
+}
+
+function renderTrtList() {
+  const el = document.getElementById('trtList'); if(!el) return;
+  el.innerHTML = treatments.map((t,i) => `
+    <div class="li"><div class="lin">💊 ${t}</div><button class="btn bd bxs" onclick="removeTrt(${i})">✕</button></div>`).join('');
+}
+function addTrt() {
+  const v = document.getElementById('newTrt').value.trim();
+  if(!v||treatments.includes(v)) { toast('Ya existe','err'); return; }
+  treatments.push(v); document.getElementById('newTrt').value='';
+  persist(); renderTrtList(); renderChips(); toast('✅ Tratamiento añadido','ok');
+}
+function removeTrt(i) { treatments.splice(i,1); persist(); renderTrtList(); renderChips(); }
+
+// ── EXPORT ────────────────────────────────────────────────
+function getExp() {
+  const cli  = document.getElementById('expCli')?.value;
+  const from = document.getElementById('expFrom')?.value;
+  const to   = document.getElementById('expTo')?.value;
+  return records.filter(r => {
+    if(cli  && r.clinic!==cli) return false;
+    if(from && r.date<from)   return false;
+    if(to   && r.date>to)     return false;
+    return true;
+  }).sort((a,b) => new Date(a.date)-new Date(b.date));
+}
+function expXlsx() {
+  const data=getExp(); if(!data.length){toast('Sin datos','err');return;}
+  const rows=[['Fecha','Paciente','Clínica','Tratamiento','Precio €','Notas']];
+  data.forEach(r=>rows.push([r.date,r.patient,r.clinic,r.treatment,r.price||0,r.notes||'']));
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:12},{wch:25},{wch:20},{wch:25},{wch:12},{wch:30}];
+  XLSX.utils.book_append_sheet(wb,ws,'Producción');
+  const sm={};data.forEach(r=>{if(!sm[r.clinic])sm[r.clinic]={t:0,n:0};sm[r.clinic].t+=r.price||0;sm[r.clinic].n++;});
+  const sr=[['Clínica','Total €','Nº Tratamientos']];
+  Object.entries(sm).forEach(([c,v])=>sr.push([c,v.t.toFixed(2),v.n]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sr),'Resumen');
+  XLSX.writeFile(wb,`denttrack_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast('📊 Excel exportado','ok');
+}
+function expCsv() {
+  const data=getExp(); if(!data.length){toast('Sin datos','err');return;}
+  const csv=['Fecha,Paciente,Clínica,Tratamiento,Precio,Notas',...data.map(r=>`${r.date},"${r.patient}","${r.clinic}","${r.treatment}",${r.price||0},"${r.notes||''}"`)].join('\n');
+  dl('denttrack_'+today()+'.csv',csv,'text/csv'); toast('📄 CSV exportado','ok');
+}
+function expJson() {
+  dl('denttrack_backup_'+today()+'.json',JSON.stringify({records,clinics,treatments,aliases,incidents,exportedAt:new Date().toISOString()},null,2),'application/json');
+  toast('🗄️ Backup exportado','ok');
+}
+function impJson(e) {
+  const file=e.target.files[0]; const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(!confirm(`Importar ${data.records?.length} registros?`))return;
+      if(data.records){const ex=new Set(records.map(r=>r.id));data.records.forEach(r=>{if(!ex.has(r.id))records.push(r);});}
+      if(data.clinics) clinics=[...new Set([...clinics,...data.clinics])];
+      if(data.treatments) treatments=[...new Set([...treatments,...data.treatments])];
+      if(data.aliases) Object.assign(aliases,data.aliases);
+      persist(); renderCfg(); renderRec(); toast(`✅ Importados`,'ok');
+    }catch(err){toast('Error al importar','err');}
+  };reader.readAsText(file);
+}
+function dl(name,content,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click();}
+function clearAll(){if(!confirm('¿BORRAR TODOS los registros? Exporta primero si quieres guardar los datos.'))return;records=[];incidents=[];persist();renderRec();toast('Borrado todo','');}
+
+// ── UTILS ─────────────────────────────────────────────────
+function fd(s){if(!s)return'';const[y,m,d]=s.split('-');return`${d}/${m}/${y}`;}
+function today(){return new Date().toISOString().slice(0,10);}
+function eq(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\x27");}
+function toast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast on'+(type?' '+type:'');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('on'),2800);
+}
+
+// ── PWA INSTALL PROMPT (Android) ──────────────────────────
+let installPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); installPrompt = e;
+  // Show subtle banner
+  const banner = document.createElement('div');
+  banner.style.cssText='position:fixed;bottom:calc(64px + var(--sib) + 8px);left:50%;transform:translateX(-50%);background:#1b2535;border:1px solid var(--accent);border-radius:12px;padding:10px 16px;font-size:13px;color:var(--accent);font-weight:700;z-index:500;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.4);white-space:nowrap;';
+  banner.textContent = '📲 Instalar DentTrack como app';
+  banner.onclick = () => { installPrompt.prompt(); banner.remove(); };
+  document.body.appendChild(banner);
+  setTimeout(() => { if(banner.parentNode) banner.remove(); }, 8000);
+});
+
+// ── INIT ──────────────────────────────────────────────────
+function init() {
+  document.getElementById('fDat').value = today();
+  document.getElementById('cotMes').value = new Date().toISOString().slice(0,7);
+  const now=new Date();
+  document.getElementById('expFrom').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+  document.getElementById('expTo').value=today();
+  updateMlbl(); renderAllDD(); updateHdr(); updateBadge();
+  initVoice();
+}
+
+// ── ONBOARDING ────────────────────────────────────────────
+function buildOnboarding() {
+  const wrap = document.getElementById('cliInputs');
+  wrap.innerHTML = '';
+  for(let i = 1; i <= 10; i++) {
+    const row = document.createElement('div');
+    row.className = 'cli-row';
+    row.innerHTML = `
+      <span class="cli-num">${i}</span>
+      <input class="cli-inp" id="onb-cli-${i}" type="text"
+        placeholder="${i <= 3 ? 'Nombre de la clínica...' : ''}"
+        autocomplete="off" autocorrect="off" autocapitalize="words"
+        oninput="validateOnb()">`;
+    wrap.appendChild(row);
+  }
+  validateOnb();
+}
+
+function validateOnb() {
+  const vals = getOnbClinics();
+  document.getElementById('onbBtn').disabled = vals.length === 0;
+  document.getElementById('onbBtn').textContent =
+    vals.length === 0 ? 'Añade al menos una clínica' :
+    vals.length === 1 ? 'Empezar con 1 clínica →' :
+    `Empezar con ${vals.length} clínicas →`;
+}
+
+function getOnbClinics() {
+  const vals = [];
+  for(let i = 1; i <= 10; i++) {
+    const v = (document.getElementById('onb-cli-'+i)?.value || '').trim();
+    if(v) vals.push(v);
+  }
+  return vals;
+}
+
+function finishOnboarding() {
+  const vals = getOnbClinics();
+  if(!vals.length) return;
+  clinics = vals;
+  localStorage.setItem('dt_onboarded', '1');
+  persist();
+  renderAllDD();
+  document.getElementById('onbScreen').classList.add('hide');
+  toast('✅ ¡Todo listo! Ya puedes empezar', 'ok');
+}
+
+function skipOnboarding() {
+  localStorage.setItem('dt_onboarded', '1');
+  document.getElementById('onbScreen').classList.add('hide');
+}
+
+init();
+
+// Show onboarding if first time (no clinics configured yet)
+if(!localStorage.getItem('dt_onboarded')) {
+  buildOnboarding();
+} else {
+  document.getElementById('onbScreen').classList.add('hide');
+}
+</script>
+</body>
+</html>
